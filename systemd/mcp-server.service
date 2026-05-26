@@ -1,0 +1,13 @@
+[Unit]
+Description=MCP API Docs Server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mcp-server
+ExecStart=/opt/mcp-server/venv/bin/python server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

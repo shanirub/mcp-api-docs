@@ -64,6 +64,30 @@ pip install -r requirements.txt
 python server.py
 ```
 
+## Installation (server setup)
+
+```bash
+# 1. Clone the repo
+git clone git@github.com:yourname/mcp-api-docs.git /opt/mcp-server
+cd /opt/mcp-server
+
+# 2. Python environment
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 3. systemd service
+ln -s /opt/mcp-server/systemd/mcp-server.service /etc/systemd/system/mcp-server.service
+systemctl daemon-reload
+systemctl enable mcp-server
+systemctl start mcp-server
+
+# 4. Verify
+systemctl status mcp-server
+```
+
+nginx and certbot setup is a one-time step — see [CLAUDE.md](CLAUDE.md) for full details.
+
 ## Deployment
 
 See [CLAUDE.md](CLAUDE.md) for full server setup notes.
