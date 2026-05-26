@@ -9,22 +9,22 @@
 - [x] Python MCP server (FastMCP, streamable HTTP)
 - [x] End-to-end verified: claude.ai → nginx → MCP server
 
-## Phase 2 — Systemd + Registration (next)
-- [ ] systemd service for MCP server (auto-start, auto-restart)
-- [ ] Register mcp.ministryofpa.ws in claude.ai Settings → Integrations
-- [ ] Verify Claude can call `lookup_symbol` tool end-to-end
+## Phase 2 — Systemd + Registration ✅
+- [x] systemd service for MCP server (auto-start, auto-restart)
+- [x] systemd service symlinked from repo (/opt/mcp-server/systemd/)
+- [x] Register mcp.ministryofpa.ws in claude.ai Settings → Connectors
+- [x] Verified Claude can call `lookup_symbol` tool end-to-end (stub response)
 
-## Phase 3 — Doc ingestion
-- [ ] Design JSON index schema (symbol, signature, params, return type, description, api, version)
-- [ ] Ingest FreeRTOS docs
-- [ ] Ingest ESP-IDF docs
-- [ ] Ingest Arduino docs
-- [ ] Ingest Raspberry Pi API docs
-- [ ] Ingest C standard library
-- [ ] Ingest C++ STL
-- [ ] Ingest Python stdlib
-- [ ] Ingest bash builtins
-- [ ] Wire index into `lookup_symbol` tool
+## Phase 3 — Doc ingestion (next)
+- [ ] Create config.py (centralised DOCS_DIR, INDEX_DIR paths)
+- [ ] Design and finalise JSON index schema
+- [ ] Create parsers/base.py (abstract base class — shared interface for all parsers)
+- [ ] Create parsers/doxygen.py (shared Doxygen XML parser for FreeRTOS + ESP-IDF)
+- [ ] Create parsers/INSTRUCTIONS.md
+- [ ] Create downloaders/freertos.py
+- [ ] Create parsers/freertos.py
+- [ ] Wire FreeRTOS index into lookup_symbol tool
+- [ ] Repeat for ESP-IDF, Arduino, Raspberry Pi, C stdlib, C++ STL, Python stdlib, bash
 
 ## Phase 4 — Search quality
 - [ ] Fuzzy matching (— tolerates typos and near-matches in symbol names)
