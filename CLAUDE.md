@@ -22,7 +22,7 @@ claude.ai (Anthropic backend)
 ## Server
 
 - Host: mcp.ministryofpa.ws (Hetzner VPS, Ubuntu 24.04)
-- SSH: `ssh root@my-first-server -i ~/.ssh/hetzner/hetzner_key` (Tailscale only, port 22 closed publicly)
+- SSH: `ssh root@my-first-server` (Tailscale only, port 22 closed publicly)
 - Service: `systemctl status mcp-server`
 - Logs: `journalctl -u mcp-server -f`
 
@@ -30,17 +30,23 @@ claude.ai (Anthropic backend)
 
 ```
 /opt/mcp-server/
-├── server.py          # MCP server entrypoint
-├── index/             # doc indexes per API (not yet built)
-│   ├── freertos.json
-│   ├── espidf.json
-│   ├── arduino.json
-│   └── ...
-├── ingest/            # scripts to download and parse API docs
+├── server.py                  # MCP server entrypoint (FastMCP, streamable HTTP)
+├── config.py                  # centralised paths (DOCS_DIR, INDEX_DIR)
+├── downloaders/               # one script per API to fetch raw docs
 │   ├── freertos.py
 │   ├── espidf.py
 │   └── ...
-├── venv/              # Python virtual environment (not committed)
+├── parsers/                   # one parser per doc format
+│   ├── INSTRUCTIONS.md        # how to add a new parser
+│   ├── base.py                # shared parser interface (ABC)
+│   ├── doxygen.py             # shared Doxygen XML parser (FreeRTOS + ESP-IDF)
+│   ├── freertos.py            # FreeRTOS-specific, calls doxygen.py
+│   └── ...
+├── index/                     # gitignored — generated JSON indexes
+├── docs/                      # gitignored — raw downloaded docs
+├── systemd/
+│   └── mcp-server.service     # symlinked to /etc/systemd/system/
+├── venv/                      # gitignored — Python virtual environment
 └── requirements.txt
 ```
 
@@ -50,6 +56,21 @@ claude.ai (Anthropic backend)
 
 Returns the matching signature, parameters, return type, and a brief description.
 Returns a clear "not found" if the symbol doesn't exist in the index.
+
+### JSON index schema (per symbol)
+```json
+{
+  "symbol": "xTaskCreate",
+  "api": "freertos",
+  "version": "10.6.0",
+  "kind": "function",
+  "signature": "BaseType_t xTaskCreate(...)",
+  "params": [],
+  "returns": "BaseType_t",
+  "header": "task.h",
+  "description": "..."
+}
+```
 
 ## APIs covered (planned)
 
@@ -68,3 +89,4 @@ Returns a clear "not found" if the symbol doesn't exist in the index.
 - TLS: Let's Encrypt via certbot, auto-renewing
 - DNS: `mcp.ministryofpa.ws` A record on Namecheap → 204.168.179.208
 - Tailscale SSH only — port 22 closed on Hetzner firewall
+- systemd service symlinked: `/opt/mcp-server/systemd/mcp-server.service` → `/etc/systemd/system/mcp-server.service`
