@@ -44,6 +44,43 @@ XML_PROGRAMLISTING  = NO
 EXTRACT_ALL         = YES
 QUIET               = YES
 WARNINGS            = YES
+
+# Preprocessing: expose symbols gated behind #if guards.
+# FreeRTOS wraps most public API in conditionals like
+# #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) -- without
+# expanding these, Doxygen skips the declarations entirely.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+SEARCH_INCLUDES        = YES
+SKIP_FUNCTION_MACROS   = NO
+INCLUDE_PATH           = {source_dir}/include
+
+# Define each #if gate to 1 so declarations reach the parser.
+# Strip port/MPU annotations not valid as C syntax to Doxygen.
+PREDEFINED             = \
+    "configSUPPORT_DYNAMIC_ALLOCATION=1" \
+    "configSUPPORT_STATIC_ALLOCATION=1" \
+    "configNUMBER_OF_CORES=1" \
+    "configUSE_CORE_AFFINITY=0" \
+    "INCLUDE_vTaskDelete=1" \
+    "INCLUDE_vTaskSuspend=1" \
+    "INCLUDE_xTaskGetHandle=1" \
+    "INCLUDE_uxTaskGetStackHighWaterMark=1" \
+    "INCLUDE_eTaskGetState=1" \
+    "configUSE_TASK_NOTIFICATIONS=1" \
+    "configUSE_TRACE_FACILITY=1" \
+    "configUSE_STATS_FORMATTING_FUNCTIONS=1" \
+    "configSTACK_DEPTH_TYPE=uint16_t" \
+    "PRIVILEGED_FUNCTION=" \
+    "PRIVILEGED_DATA=" \
+    "portDONT_DISCARD="
+
+# Ensure annotations are expanded during substitution.
+EXPAND_AS_DEFINED      = \
+    PRIVILEGED_FUNCTION \
+    PRIVILEGED_DATA \
+    portDONT_DISCARD
 """
 
 
