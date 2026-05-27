@@ -32,16 +32,18 @@ REPO_URL = "https://github.com/FreeRTOS/FreeRTOS-Kernel.git"
 # Minimal Doxyfile — only the settings we need.
 # Doxygen fills everything else with sensible defaults.
 DOXYFILE_TEMPLATE = """\
-PROJECT_NAME     = FreeRTOS-Kernel
-PROJECT_NUMBER   = {version}
-INPUT            = {source_dir}/include
-RECURSIVE        = YES
-GENERATE_HTML    = NO
-GENERATE_LATEX   = NO
-GENERATE_XML     = YES
-XML_OUTPUT       = {xml_dir}
-QUIET            = YES
-WARNINGS         = YES
+PROJECT_NAME        = FreeRTOS-Kernel
+PROJECT_NUMBER      = {version}
+INPUT               = {source_dir}/include
+RECURSIVE           = YES
+GENERATE_HTML       = NO
+GENERATE_LATEX      = NO
+GENERATE_XML        = YES
+XML_OUTPUT          = {xml_dir}
+XML_PROGRAMLISTING  = NO
+EXTRACT_ALL         = YES
+QUIET               = YES
+WARNINGS            = YES
 """
 
 

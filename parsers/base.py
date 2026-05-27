@@ -24,7 +24,6 @@ Index schema (per symbol):
     ],
     "returns":     str,   # return type, empty string for void/macros
     "header":      str,   # e.g. "task.h"
-    "description": str,   # brief description
 }
 """
 
