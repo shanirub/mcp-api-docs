@@ -1,8 +1,13 @@
+# Generated — do not commit
+docs/
+index/
+
+# Python
 venv/
 __pycache__/
 *.pyc
 *.pyo
 .env
-secrets/
-index/        # doc indexes are large, generate locally with ingest scripts
-*.log
+
+# Doxygen
+doxyfile
