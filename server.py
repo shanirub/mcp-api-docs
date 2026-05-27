@@ -78,22 +78,20 @@ INDEX = _load_index()
 def _format_symbol(s: dict) -> str:
     """Format a symbol dict into a human-readable string for Claude."""
     lines = [
-        f"Symbol:      {s['symbol']}",
-        f"API:         {s['api']} {s['version']}",
-        f"Kind:        {s['kind']}",
-        f"Header:      {s['header']}",
-        f"Signature:   {s['signature']}",
-        f"Description: {s['description']}",
+        f"Symbol:    {s['symbol']}",
+        f"API:       {s['api']} {s['version']}",
+        f"Kind:      {s['kind']}",
+        f"Header:    {s['header']}",
+        f"Signature: {s['signature']}",
     ]
 
     if s.get("params"):
         lines.append("Parameters:")
         for p in s["params"]:
-            desc = f" — {p['description']}" if p.get("description") else ""
-            lines.append(f"  {p['type']} {p['name']}{desc}")
+            lines.append(f"  {p['type']} {p['name']}")
 
     if s.get("returns"):
-        lines.append(f"Returns:     {s['returns']}")
+        lines.append(f"Returns:   {s['returns']}")
 
     return "\n".join(lines)
 
