@@ -1,97 +1,56 @@
 # mcp-api-docs
 
-A remote [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that gives Claude real-time access to API documentation — so it can verify symbol names, signatures, and parameters before answering, rather than relying on potentially stale training data.
+A self-hosted MCP (Model Context Protocol) server that gives Claude real-time access
+to API documentation for symbol verification — preventing hallucinated or outdated API
+usage in responses.
 
-## The problem
+## Status
 
-Claude's training data on APIs (FreeRTOS, ESP-IDF, Arduino, etc.) goes stale. Functions get renamed, signatures change, parameters are added or removed. Claude may confidently suggest a function that no longer exists.
+Live at `mcp.ministryofpa.ws`. FreeRTOS V11.3.0 index active (1272 symbols).
 
-## The solution
+## How it works
 
-A self-hosted MCP server that Claude calls at query time to look up a symbol in a versioned doc index. If the symbol doesn't exist or the signature differs from what Claude expected, Claude flags it before giving an answer.
-
-## APIs covered
-
-| API | Status |
-|-----|--------|
-| FreeRTOS | planned |
-| ESP-IDF | planned |
-| Arduino | planned |
-| Raspberry Pi | planned |
-| C stdlib | planned |
-| C++ STL | planned |
-| Python stdlib | planned |
-| bash builtins | planned |
-
-## Architecture
+Claude's training data goes stale. When asked about an API, Claude can now call
+`lookup_symbol(symbol, api)` to verify the exact signature, parameter names, types,
+and return type against a locally-built documentation index — before committing to
+an answer.
 
 ```
-claude.ai (Anthropic backend)
-    → HTTPS → nginx (TLS termination)
-        → localhost:8000 → FastMCP Python server
-            → JSON doc index
+claude.ai → HTTPS → nginx (TLS) → FastMCP server → JSON index
 ```
 
-## Infrastructure
-
-- VPS: Hetzner, Ubuntu 24.04
-- Domain: mcp.ministryofpa.ws
-- TLS: Let's Encrypt (auto-renewing)
-- SSH: Tailscale only (port 22 closed publicly)
-
-## MCP tool
-
-### `lookup_symbol(symbol, api?)`
-
-Looks up a symbol in the doc index.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `symbol` | string | yes | Function/macro/type name to look up |
-| `api` | string | no | Limit search to a specific API (e.g. `freertos`) |
-
-Returns the symbol's signature, parameters, return type, and a brief description.
-Returns a clear "not found" if the symbol doesn't exist — allowing Claude to flag the discrepancy.
-
-## Local development
+## Quickstart
 
 ```bash
-git clone git@github.com:yourname/mcp-api-docs.git
-cd mcp-api-docs
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python server.py
-```
+# SSH into server
+ssh srub@my-first-server
 
-## Installation (server setup)
-
-```bash
-# 1. Clone the repo
-git clone git@github.com:yourname/mcp-api-docs.git /opt/mcp-server
+# Rebuild the index
 cd /opt/mcp-server
-
-# 2. Python environment
-python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+python ingest.py
 
-# 3. systemd service
-ln -s /opt/mcp-server/systemd/mcp-server.service /etc/systemd/system/mcp-server.service
-systemctl daemon-reload
-systemctl enable mcp-server
-systemctl start mcp-server
-
-# 4. Verify
-systemctl status mcp-server
+# Restart server
+sudo systemctl restart mcp-server
 ```
 
-nginx and certbot setup is a one-time step — see [CLAUDE.md](CLAUDE.md) for full details.
+## Adding a new API
 
-## Deployment
+See `parsers/INSTRUCTIONS.md`.
 
-See [CLAUDE.md](CLAUDE.md) for full server setup notes.
+## APIs
 
-## Roadmap
+| API       | Status  | Symbols |
+|-----------|---------|---------|
+| FreeRTOS  | ✅ live | 1272    |
+| ESP-IDF   | planned | —       |
+| Arduino   | planned | —       |
+| C stdlib  | planned | —       |
+| C++ STL   | planned | —       |
+| Python    | planned | —       |
+| bash      | planned | —       |
 
-See [ROADMAP.md](ROADMAP.md).
+## Docs
+
+See `CLAUDE.md` for architecture and setup details.
+See `ROADMAP.md` for planned work.
