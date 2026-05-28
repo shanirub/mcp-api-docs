@@ -15,16 +15,22 @@ The in-memory index is a nested dict:
 
 lookup_symbol() searches by exact symbol name within the requested API,
 or across all APIs if api="any".
+
+On exact miss, fuzzy matching (Jaro-Winkler) returns the closest candidates.
+On exact hit, optional signature comparison reports any discrepancies between
+the caller's expected signature and the indexed one.
 """
 
 import json
 import logging
 import os
+from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from config import INDEX_DIR
+from search import compare_signature, fuzzy_search
 
 logging.basicConfig(
     level=logging.INFO,
@@ -96,41 +102,92 @@ def _format_symbol(s: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_fuzzy_results(symbol: str, candidates: list[dict]) -> str:
+    """Format fuzzy candidates into a human-readable suggestion string."""
+    lines = [f"Symbol '{symbol}' not found. Did you mean:"]
+    for c in candidates:
+        lines.append(f"  {c['symbol']} (score: {c['score']})")
+    return "\n".join(lines)
+
+
 @mcp.tool()
-def lookup_symbol(symbol: str, api: str) -> str:
+def lookup_symbol(
+    symbol: str,
+    api: str,
+    expected_params: Optional[list[dict]] = None,
+    expected_returns: Optional[str] = None,
+) -> str:
     """
-    Look up an API symbol, returning its signature, parameters, and description.
+    Look up an API symbol, returning its signature, parameters, and return type.
+
+    On exact match, optionally compares the indexed signature against the
+    caller's expected signature and reports any discrepancies.
+
+    On miss, returns the closest fuzzy matches (Jaro-Winkler similarity).
 
     Args:
-        symbol: Exact symbol name to look up, e.g. "xTaskCreate".
-        api:    API name to search within, e.g. "freertos".
-                Pass "any" to search across all loaded APIs.
+        symbol:           Exact symbol name to look up, e.g. "xTaskCreate".
+        api:              API name to search within, e.g. "freertos".
+                          Pass "any" to search across all loaded APIs.
+        expected_params:  Optional. List of {"name": str, "type": str} dicts
+                          in declaration order, representing the caller's
+                          expected parameter list.
+        expected_returns: Optional. Expected return type string, e.g. "BaseType_t".
 
     Returns:
-        Formatted symbol information, or a clear "not found" message.
+        Formatted symbol information, signature discrepancies if any,
+        fuzzy suggestions on miss, or a clear "not found" message.
     """
     if not INDEX:
-        return (
-            "Index is empty. Run `python ingest.py` on the server to build it."
-        )
+        return "Index is empty. Run `python ingest.py` on the server to build it."
 
-    apis_to_search = (
-        list(INDEX.keys()) if api == "any" else [api]
-    )
+    apis_to_search = list(INDEX.keys()) if api == "any" else [api]
 
+    # --- Exact match ---
     results = []
     for api_name in apis_to_search:
         if api_name not in INDEX:
             continue
         match = INDEX[api_name].get(symbol)
         if match:
-            results.append(_format_symbol(match))
+            result = _format_symbol(match)
 
-    if not results:
-        searched = ", ".join(apis_to_search)
-        return f"Symbol '{symbol}' not found in: {searched}."
+            # Signature comparison — only when caller provides expected signature.
+            if expected_params is not None or expected_returns is not None:
+                discrepancies = compare_signature(
+                    indexed=match,
+                    expected_params=expected_params or [],
+                    expected_returns=expected_returns or "",
+                )
+                if discrepancies:
+                    result += "\n\nSignature discrepancies:\n" + "\n".join(
+                        f"  - {d}" for d in discrepancies
+                    )
+                else:
+                    result += "\n\nSignature matches."
 
-    return "\n\n---\n\n".join(results)
+            results.append(result)
+
+    if results:
+        return "\n\n---\n\n".join(results)
+
+    # --- Fuzzy fallback ---
+    fuzzy_candidates = []
+    for api_name in apis_to_search:
+        if api_name not in INDEX:
+            continue
+        candidates = fuzzy_search(symbol, INDEX[api_name])
+        fuzzy_candidates.extend(candidates)
+
+    # Sort across APIs by score descending, take top N.
+    fuzzy_candidates.sort(key=lambda c: c["score"], reverse=True)
+    fuzzy_candidates = fuzzy_candidates[:3]
+
+    if fuzzy_candidates:
+        return _format_fuzzy_results(symbol, fuzzy_candidates)
+
+    searched = ", ".join(apis_to_search)
+    return f"Symbol '{symbol}' not found in: {searched}."
 
 
 if __name__ == "__main__":
