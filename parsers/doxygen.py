@@ -75,12 +75,10 @@ def _parse_member(member_elem, header: str, api: str, version: str) -> dict | No
     # Build full signature string.
     # For functions: "<return_type> <name>(<params>)"
     # For macros:    "<name>(<params>)" or just "<name>"
+    type_elem = member_elem.find("type")
     return_type = "".join(
-        (member_elem.find("type") or ET.Element("x")).itertext()
+        type_elem.itertext() if type_elem is not None else []
     ).strip()
-
-    if "xTaskCreate" in _text(member_elem, "name"):
-        print(f"DEBUG xTaskCreate: type elem={member_elem.find('type')}, return_type={repr(return_type)}")
 
     argsstring = _text(member_elem, "argsstring")
     signature  = f"{return_type} {symbol}{argsstring}".strip()
