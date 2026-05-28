@@ -10,6 +10,12 @@ Claude uses training data to reason about APIs (FreeRTOS, ESP-IDF, Arduino, C/C+
 Training data goes stale. This server gives Claude a tool to cross-check symbol names and
 signatures at query time, before committing to an answer.
 
+The tool supports:
+- **Exact lookup** — returns signature, parameters, and return type
+- **Fuzzy matching** — tolerates typos, returns top 3 closest matches with confidence scores
+- **Signature comparison** — diffs expected vs indexed params and return type, reports discrepancies
+- **Multi-API search** — pass `api="any"` to search across all loaded indexes
+
 ## Architecture
 
 ```
@@ -31,18 +37,19 @@ claude.ai (Anthropic backend)
 ```
 /opt/mcp-server/
 ├── server.py                  # MCP server entrypoint (FastMCP, streamable HTTP)
-├── config.py                  # centralised paths (DOCS_DIR, INDEX_DIR)
+├── search.py                  # fuzzy search (Jaro-Winkler) + signature comparison
+├── config.py                  # centralised paths, fuzzy thresholds, ESP-IDF component list
 ├── ingest.py                  # orchestrator: download → parse → write index
-├── downloaders/               # one module per API to fetch raw docs
-│   ├── freertos.py            # clones FreeRTOS-Kernel, runs Doxygen, outputs XML
-│   └── ...
+├── downloaders/               # one module per API family to fetch raw docs
+│   ├── freertos.py            # shallow clone of FreeRTOS-Kernel, runs Doxygen
+│   └── esp_idf.py             # sparse checkout of ESP-IDF components, runs Doxygen per component
 ├── parsers/                   # one parser per doc format
 │   ├── INSTRUCTIONS.md        # how to add a new parser
 │   ├── base.py                # shared parser interface (ABC)
 │   ├── doxygen.py             # shared Doxygen XML parser (FreeRTOS + ESP-IDF)
-│   ├── freertos.py            # FreeRTOS-specific, calls doxygen.py
-│   └── ...
-├── index/                     # gitignored — generated JSON indexes
+│   ├── freertos.py            # FreeRTOS-specific, delegates to doxygen.py
+│   └── esp_idf.py             # ESP-IDF-specific, delegates to doxygen.py
+├── index/                     # gitignored — generated JSON indexes (one per API)
 ├── docs/                      # gitignored — raw downloaded docs + Doxygen XML
 ├── systemd/
 │   └── mcp-server.service     # symlinked to /etc/systemd/system/
@@ -52,11 +59,17 @@ claude.ai (Anthropic backend)
 
 ## MCP tool
 
-`lookup_symbol(symbol: str, api: str) -> str`
+`lookup_symbol(symbol, api, expected_params, expected_returns) -> str`
 
-Returns the matching signature, parameters, and return type.
-Pass `api="any"` to search across all loaded APIs.
-Returns a clear "not found" if the symbol doesn't exist in the index.
+All four arguments are required.
+
+- `symbol` — exact symbol name to look up, e.g. `"xTaskCreate"`
+- `api` — API name, e.g. `"freertos"`, `"esp_driver_i2c"`. Pass `"any"` to search all.
+- `expected_params` — list of `{"name": str, "type": str}` dicts in declaration order
+- `expected_returns` — expected return type string, e.g. `"BaseType_t"`
+
+On exact hit: returns symbol info + signature comparison result (match or discrepancies).
+On miss: returns top 3 fuzzy candidates above threshold with confidence scores.
 
 ### JSON index schema (per symbol)
 ```json
@@ -65,7 +78,7 @@ Returns a clear "not found" if the symbol doesn't exist in the index.
     "api":       "freertos",
     "version":   "V11.3.0",
     "kind":      "function",
-    "signature": "xTaskCreate(TaskFunction_t pxTaskCode, ...)",
+    "signature": "BaseType_t xTaskCreate(TaskFunction_t pxTaskCode, ...)",
     "params": [
         {"name": "pxTaskCode", "type": "TaskFunction_t"},
         ...
@@ -75,29 +88,60 @@ Returns a clear "not found" if the symbol doesn't exist in the index.
 }
 ```
 
-## Re-ingesting docs
+## APIs covered
 
-To rebuild the index after an API update:
+| API                | Status  | Format      | Symbols |
+|--------------------|---------|-------------|---------|
+| FreeRTOS           | ✅ live | Doxygen XML | 1272    |
+| esp_driver_i2c     | ✅ live | Doxygen XML | 21      |
+| esp_driver_uart    | ✅ live | Doxygen XML | 77      |
+| esp_driver_gpio    | ✅ live | Doxygen XML | 60      |
+| esp_wifi           | ✅ live | Doxygen XML | 457     |
+| esp_http_server    | ✅ live | Doxygen XML | 75      |
+| esp_timer          | ✅ live | Doxygen XML | 17      |
+| Arduino            | planned | —           | —       |
+| C stdlib           | planned | —           | —       |
+| C++ STL            | planned | —           | —       |
+| Python             | planned | —           | —       |
+| bash               | planned | —           | —       |
+
+## Re-ingesting docs
 
 ```bash
 cd /opt/mcp-server
 source venv/bin/activate
-python ingest.py              # all APIs
-python ingest.py freertos     # specific API only
+
+python ingest.py                  # all APIs
+python ingest.py freertos         # FreeRTOS only
+python ingest.py esp_idf          # all ESP-IDF components
+python ingest.py esp_driver_i2c   # one ESP-IDF component only
+
 sudo systemctl restart mcp-server
 ```
 
-## APIs covered
+## Adding a new API
 
-| API       | Status    | Format      | Symbols |
-|-----------|-----------|-------------|---------|
-| FreeRTOS  | ✅ live   | Doxygen XML | 1272    |
-| ESP-IDF   | planned   | Doxygen XML | —       |
-| Arduino   | planned   | —           | —       |
-| C stdlib  | planned   | —           | —       |
-| C++ STL   | planned   | —           | —       |
-| Python    | planned   | —           | —       |
-| bash      | planned   | —           | —       |
+See `parsers/INSTRUCTIONS.md`.
+
+For ESP-IDF components: add the component to `ESP_IDF_COMPONENTS` in `config.py` —
+no other changes needed.
+
+For a new API family (different doc format): add a downloader under `downloaders/`,
+a parser under `parsers/`, and register it in `ingest.py`.
+
+## config.py constants
+
+- `DOCS_DIR` — raw downloaded docs and Doxygen XML
+- `INDEX_DIR` — generated JSON indexes
+- `FUZZY_THRESHOLD` — minimum Jaro-Winkler score (0.0–1.0) for fuzzy candidates (default 0.85)
+- `FUZZY_TOP_N` — maximum fuzzy candidates returned (default 3)
+- `ESP_IDF_COMPONENTS` — dict of component name → include subpath for sparse checkout
+
+## Known issues
+
+- `esp_driver_gpio`: `rtc_io_number_get` and `rtc_gpio_get_level` not indexed.
+  Both are behind `#if SOC_RTCIO_PIN_COUNT > 0` — Doxygen `PREDEFINED` cannot evaluate
+  numeric comparisons, only simple defined/undefined substitutions.
 
 ## Setup notes
 
@@ -107,3 +151,4 @@ sudo systemctl restart mcp-server
 - Tailscale SSH only — port 22 closed on Hetzner firewall
 - systemd service symlinked: `/opt/mcp-server/systemd/mcp-server.service` → `/etc/systemd/system/mcp-server.service`
 - SSH as `srub` (not root); `sudo` allowed for `systemctl restart mcp-server` only
+- Python deps: `fastmcp`, `uvicorn`, `rapidfuzz`

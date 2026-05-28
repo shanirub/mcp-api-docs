@@ -33,7 +33,7 @@
 - [x] "Did you mean X?" suggestions for unknown symbols
 
 ## Phase 5 — More APIs
-- [ ] ESP-IDF (Doxygen XML — doxygen.py already reusable)
+- [x] ESP-IDF (Doxygen XML — doxygen.py already reusable)
 - [ ] Arduino
 - [ ] Raspberry Pi (raspi)
 - [ ] C standard library
@@ -52,3 +52,8 @@
 - Web UI for browsing the index
 - CLI tool for local symbol lookup
 - Version-aware lookup (flag if symbol exists in v1 but not v2)
+
+## Known Issues
+- [ ] esp_driver_gpio: symbols behind `#if SOC_RTCIO_PIN_COUNT > 0` not indexed
+      (rtc_io_number_get, rtc_gpio_get_level) — Doxygen PREDEFINED can't evaluate
+      numeric comparisons, only simple defined/undefined gates
