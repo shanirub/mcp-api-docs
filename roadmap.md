@@ -27,11 +27,10 @@
 - [x] lookup_symbol wired to real index, verified end-to-end with xTaskCreate
 
 ## Phase 4 — Search quality (next)
-- [ ] Fix empty `returns` field for some symbols (e.g. xTaskCreate)
-- [ ] Fuzzy matching (tolerates typos and near-matches in symbol names)
-- [ ] Multi-API search (query across all APIs at once via api="any")
-- [ ] Version-aware lookup (flag if symbol exists in v1 but not v2)
-- [ ] "Did you mean X?" suggestions for unknown symbols
+- [x] Fix empty `returns` field for some symbols (e.g. xTaskCreate)
+- [x] Fuzzy matching (tolerates typos and near-matches in symbol names)
+- [x] Multi-API search (query across all APIs at once via api="any")
+- [x] "Did you mean X?" suggestions for unknown symbols
 
 ## Phase 5 — More APIs
 - [ ] ESP-IDF (Doxygen XML — doxygen.py already reusable)
@@ -52,3 +51,4 @@
 - Semantic search layer (embedding-based) for conceptual queries
 - Web UI for browsing the index
 - CLI tool for local symbol lookup
+- Version-aware lookup (flag if symbol exists in v1 but not v2)
