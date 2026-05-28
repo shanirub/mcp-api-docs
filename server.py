@@ -24,7 +24,6 @@ the caller's expected signature and the indexed one.
 import json
 import logging
 import os
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
@@ -114,8 +113,8 @@ def _format_fuzzy_results(symbol: str, candidates: list[dict]) -> str:
 def lookup_symbol(
     symbol: str,
     api: str,
-    expected_params: Optional[list[dict]] = None,
-    expected_returns: Optional[str] = None,
+    expected_params: list[dict],
+    expected_returns: str,
 ) -> str:
     """
     Look up an API symbol, returning its signature, parameters, and return type.
@@ -129,10 +128,10 @@ def lookup_symbol(
         symbol:           Exact symbol name to look up, e.g. "xTaskCreate".
         api:              API name to search within, e.g. "freertos".
                           Pass "any" to search across all loaded APIs.
-        expected_params:  Optional. List of {"name": str, "type": str} dicts
+        expected_params:  List of {"name": str, "type": str} dicts
                           in declaration order, representing the caller's
                           expected parameter list.
-        expected_returns: Optional. Expected return type string, e.g. "BaseType_t".
+        expected_returns: Expected return type string, e.g. "BaseType_t".
 
     Returns:
         Formatted symbol information, signature discrepancies if any,
