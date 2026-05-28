@@ -79,6 +79,9 @@ def _parse_member(member_elem, header: str, api: str, version: str) -> dict | No
         (member_elem.find("type") or ET.Element("x")).itertext()
     ).strip()
 
+    if "xTaskCreate" in _text(member_elem, "name"):
+        print(f"DEBUG xTaskCreate: type elem={member_elem.find('type')}, return_type={repr(return_type)}")
+
     argsstring = _text(member_elem, "argsstring")
     signature  = f"{return_type} {symbol}{argsstring}".strip()
 
