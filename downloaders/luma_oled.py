@@ -51,7 +51,7 @@ VENV_PACKAGES = [
 def _latest_version() -> str:
     """Query GitHub API for the latest luma.oled release tag."""
     req = urllib.request.Request(
-        GITHUB_API_LATEST,
+        GITHUB_API_TAGS,
         headers={"Accept": "application/vnd.github+json",
                  "User-Agent": "mcp-api-docs-server"},
     )
