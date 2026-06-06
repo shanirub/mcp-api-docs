@@ -32,8 +32,8 @@ from config import DOCS_DIR
 
 log = logging.getLogger(__name__)
 
-GITHUB_API_LATEST = (
-    "https://api.github.com/repos/rm-hull/luma.oled/releases/latest"
+GITHUB_API_TAGS = (
+    "https://api.github.com/repos/rm-hull/luma.oled/tags?per_page=1"
 )
 REPO_URL = "https://github.com/rm-hull/luma.oled.git"
 
@@ -57,7 +57,7 @@ def _latest_version() -> str:
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.loads(resp.read())
-    tag = data["tag_name"]          # e.g. "3.15.0"
+    tag = data[0]["name"]      # e.g. "3.15.0"
     log.info("Latest luma.oled release: %s", tag)
     return tag
 
