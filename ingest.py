@@ -47,6 +47,7 @@ from downloaders import freertos as freertos_downloader
 from downloaders import esp_idf as esp_idf_downloader
 from downloaders import pigpio as pigpio_downloader
 from downloaders import luma_oled as luma_oled_downloader
+from downloaders import esp_isotp as esp_isotp_downloader
 from parsers.freertos import FreeRTOSParser
 from parsers.esp_idf import EspIdfParser
 from parsers.pigpio_c import PigpioCParser
@@ -88,6 +89,10 @@ _PIGPIO_PARSERS = {
     "pigpio_python": PigpioPythonParser(),
 }
 
+_ESP_ISOTP_PARSERS = {
+    "esp_isotp": EspIdfParser("esp_isotp"),
+    "isotp_c":   EspIdfParser("isotp_c"),
+}
 
 def _write_index(api_name: str, symbols: list[dict]) -> None:
     """Write symbol list to index/<api_name>.json."""
@@ -136,6 +141,19 @@ def ingest_pigpio() -> None:
         #   "pigpio_c":     PigpioCParser(),      # comment to skip C API
         #   "pigpio_python": PigpioPythonParser(), # comment to skip Python API
 
+def ingest_esp_isotp() -> None:
+    """Ingest esp_isotp + isotp_c from a single idf-extra-components clone."""
+    log.info("=== Ingesting esp_isotp ===")
+    results = esp_isotp_downloader.download()
+    for api_name, parser in _ESP_ISOTP_PARSERS.items():
+        if api_name not in results:
+            log.warning("No download result for %s — skipping.", api_name)
+            continue
+        version = results[api_name]["version"]
+        xml_dir = results[api_name]["xml_dir"]
+        symbols = parser.parse(xml_dir, version)
+        _write_index(api_name, symbols)
+
 
 def ingest_esp_idf(component_filter: str | None = None) -> None:
     """
@@ -174,10 +192,13 @@ def main() -> None:
                 ingest_single(api_name)
             ingest_pigpio()
             ingest_esp_idf()
+            ingest_esp_isotp()
         elif target == "pigpio":
             ingest_pigpio()
         elif target == "esp_idf":
             ingest_esp_idf()
+        elif target == "esp_isotp":
+            ingest_esp_isotp()
         elif target in ESP_IDF_APIS:
             ingest_esp_idf(component_filter=target)
         elif target in APIS:

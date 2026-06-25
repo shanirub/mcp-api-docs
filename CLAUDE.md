@@ -99,6 +99,8 @@ On miss: returns top 3 fuzzy candidates above threshold with confidence scores.
 | esp_wifi           | ✅ live | Doxygen XML | 457     |
 | esp_http_server    | ✅ live | Doxygen XML | 75      |
 | esp_timer          | ✅ live | Doxygen XML | 17      |
+| esp_isotp          | ✅ live | Doxygen XML | 6    |  (idf-extra-components, master)
+| isotp_c            | ✅ live | Doxygen XML | 9    |  (SimonCahill/isotp-c submodule)
 | Arduino            | planned | —           | —       |
 | C stdlib           | planned | —           | —       |
 | C++ STL            | planned | —           | —       |
